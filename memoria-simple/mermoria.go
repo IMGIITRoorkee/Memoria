@@ -1,6 +1,7 @@
 package memoria
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -31,8 +32,8 @@ type PathKey struct {
 type PathTransform func(key string) *PathKey
 
 type Options struct {
-	CacheSize uint64
-	Basedir   string
+	MaxCacheSize uint64
+	Basedir      string
 	// Tempdir       string solve for issues
 	pathPerm      os.FileMode
 	filePerm      os.FileMode
@@ -44,8 +45,9 @@ type Options struct {
 }
 type Memoria struct {
 	Options
-	cache map[string][]byte
-	mu    sync.RWMutex
+	cache     map[string][]byte
+	mu        sync.RWMutex
+	cacheSize uint64
 }
 
 // returns an intiialised Memoria strucutre
@@ -63,8 +65,8 @@ func New(o Options) *Memoria {
 		o.bufferSize = defaultBufferSize
 	}
 
-	if o.CacheSize == 0 {
-		o.CacheSize = defaultCacheSize
+	if o.MaxCacheSize == 0 {
+		o.MaxCacheSize = defaultCacheSize
 	}
 
 	if o.filePerm == 0 {
@@ -82,7 +84,33 @@ func New(o Options) *Memoria {
 	return m
 }
 
-func (m *Memoria) writeWithLock(pathKey *PathKey, r io.Reader, sync bool) error {
+func (m *Memoria) transform(key string) (pathkey *PathKey) {
+	pathkey = m.PathTransform(key)
+	pathkey.originalKey = key
+	return pathkey
+}
+
+// Write synchronously the key-value pair to the disk making it immedialtely avaialble for
+// reads. If you need stronger sync gaurantess see WriteStream
+func (m *Memoria) Write(key string, val []byte) error {
+	return m.WriteStream(key, bytes.NewReader(val), false)
+}
+
+// writes the data given by the io.reader  performs explicit sync if mentioned otherwise
+// depedning on the physical media it sync
+func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
+
+	if len(key) <= 0 {
+		return fmt.Errorf("Empty key")
+	}
+
+	pathKey := m.transform(key)
+
+	//TODO: check for bad paths check if any part contains / after being transformed
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if err := m.createDirIfMissing(pathKey); err != nil {
 		return fmt.Errorf("Cannot create directory: %s", err)
 	}
@@ -100,12 +128,44 @@ func (m *Memoria) writeWithLock(pathKey *PathKey, r io.Reader, sync bool) error 
 	// this is the place where data transfers actually happens when
 	// we transfer a read buffer to a writer
 	if _, err := io.Copy(wc, r); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-		return fmt.Errorf("error while copying")
+		return cleanUp(f, fmt.Errorf("Cannot copy from read buffer %s", err))
 	}
 
+	if err := wc.Close(); err != nil {
+		return cleanUp(f, fmt.Errorf("Cannot close compression error %s", err))
+	}
+
+	//TODO NOW: Add bug here
+	if sync {
+		if err := f.Sync(); err != nil {
+			cleanUp(f, fmt.Errorf("Cannot Sync: %s", err))
+		}
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("Cannot close file: %s", err)
+	}
+
+	//Atomic Writes: uncomment the following code when implemented atomic writes
+	// fullPath := m.completePath(pathKey)
+
+	// if f.Name() != fullPath {
+	// 	if err := os.Rename(f.Name(), fullPath); err != nil {
+	// 		os.Remove(f.Name())
+	// 		return fmt.Errorf("Cannot rename files: %s", err)
+	// 	}
+	// }
+
+	// empty the cache for original key
+	m.emptyCacheFor(pathKey.originalKey) // cache is read only
+
 	return nil
+}
+
+func (m *Memoria) emptyCacheFor(key string) {
+	if val, ok := m.cache[key]; ok {
+		m.cacheSize -= uint64(len(val))
+		delete(m.cache, key)
+	}
 }
 
 func (m *Memoria) createDirIfMissing(pathkey *PathKey) error {
@@ -120,7 +180,7 @@ func (m *Memoria) createKeyFile(pathKey *PathKey) (*os.File, error) {
 	// O_WRONLY: Open for writing only
 	// O_CREATE: Create the file if it does not exist
 	// O_TRUNC: if file exists truncate it to length 0
-	f, err := os.OpenFile(m.pathFor(pathKey), mode, m.filePerm) //creates the file
+	f, err := os.OpenFile(m.completePath(pathKey), mode, m.filePerm) //creates the file
 	if err != nil {
 		return nil, fmt.Errorf("open file: %s", err)
 	}
@@ -129,8 +189,10 @@ func (m *Memoria) createKeyFile(pathKey *PathKey) (*os.File, error) {
 }
 
 func (m *Memoria) pathFor(pathkey *PathKey) string {
-	path := filepath.Join(m.Basedir, filepath.Join(pathkey.Path...))
-	return filepath.Join(path, pathkey.FileName)
+	return filepath.Join(m.Basedir, filepath.Join(pathkey.Path...))
+}
+func (m *Memoria) completePath(path *PathKey) string {
+	return filepath.Join(m.pathFor(path), path.FileName)
 }
 
 // If you do compression you need both write and close interfaces so the
@@ -144,12 +206,12 @@ func (wc *nopWriteCloser) Write(p []byte) (int, error) { return wc.Writer.Write(
 func (wc *nopWriteCloser) Close() error                { return nil }
 
 // /// HELPER FUNCTIONS REFACTOR PLEASE!
-func cleanUp(file *os.File) error {
+func cleanUp(file *os.File, onCleanUpError error) error {
 	if err := file.Close(); err != nil {
 		return fmt.Errorf("Cannot close file while cleanup:  %s", err)
 	}
 	if err := os.Remove(file.Name()); err != nil {
 		return fmt.Errorf("Cannot remoave file while cleanup: %s", err)
 	}
-	return nil
+	return fmt.Errorf("%s ..Files Cleaned!", onCleanUpError)
 }
