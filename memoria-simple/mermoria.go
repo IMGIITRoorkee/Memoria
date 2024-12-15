@@ -21,6 +21,32 @@ var (
 	defaultTransform = func(s string) *PathKey { return &PathKey{Path: []string{}, FileName: s} }
 )
 
+type defaultCachePolicy struct{}
+
+func (dc *defaultCachePolicy) Eject(m *Memoria, requriedSpace uint64) error {
+	spaceFreed := uint64(0)
+	for key, val := range m.cache {
+		if spaceFreed >= requriedSpace {
+			break
+		}
+		valSize := uint64(len(val))
+		m.cacheSize -= valSize
+		delete(m.cache, key)
+		spaceFreed += valSize
+	}
+	return nil
+}
+
+func (dc *defaultCachePolicy) Insert(m *Memoria, key string, val []byte) error {
+	valueSize := uint64(len(val))
+	if m.cacheSize+valueSize > m.MaxCacheSize {
+		return fmt.Errorf("defaultCachePolicy: Failded to make room for value (%d/%d)", valueSize, m.MaxCacheSize)
+	}
+	m.cache[key] = val
+	m.cacheSize += valueSize
+	return nil
+}
+
 type PathKey struct {
 	Path        []string
 	FileName    string
@@ -31,6 +57,11 @@ type PathKey struct {
 // so the final  location of the data file will be <basedir>/ab/cde/f/abcdef
 type PathTransform func(key string) *PathKey
 
+type CachePolicy interface {
+	Eject(m *Memoria, requriedSpace uint64) error
+	Insert(m *Memoria, key string, val []byte) error
+}
+
 type Options struct {
 	MaxCacheSize uint64
 	Basedir      string
@@ -38,6 +69,7 @@ type Options struct {
 	pathPerm      os.FileMode
 	filePerm      os.FileMode
 	PathTransform PathTransform
+	cachePolicy   CachePolicy
 	bufferSize    int // the reading and writing is bufferd in memria so this feild represents the size of that buffer
 	// compression Compression this field represents a compression mechanism for the store
 	// index Indexer this field is for the stores that have some sort of ordering
@@ -59,6 +91,10 @@ func New(o Options) *Memoria {
 
 	if o.PathTransform == nil {
 		o.PathTransform = defaultTransform
+	}
+
+	if o.cachePolicy == nil {
+		o.cachePolicy = &defaultCachePolicy{}
 	}
 
 	if o.bufferSize == 0 {
@@ -188,11 +224,154 @@ func (m *Memoria) createKeyFile(pathKey *PathKey) (*os.File, error) {
 
 }
 
+func (m *Memoria) Read(key string) ([]byte, error) {
+	rc, err := m.ReadStream(key, false)
+	if err != nil {
+		return []byte{}, err
+	}
+	defer rc.Close()
+	return io.ReadAll(rc)
+}
+
+// ReadStream takes the key and a bool byPassCache to bypass the cache and laziliy
+// delete all the contents of cache for the hit
+
+func (m *Memoria) ReadStream(key string, bypassCache bool) (io.ReadCloser, error) {
+	pathKey := m.transform(key)
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if val, ok := m.cache[key]; ok {
+		if !bypassCache {
+			buf := bytes.NewReader(val)
+			//COMPRESSION: make this the compression reader in case of compression
+			return io.NopCloser(buf), nil
+		}
+		go func() {
+			m.mu.Lock()
+			defer m.mu.Unlock()
+			m.cacheSize -= uint64(len(val))
+			delete(m.cache, key)
+		}()
+	}
+
+	// read the file from disk in case of cache miss or bypass cache
+	fileName := m.completePath(pathKey)
+
+	//TODO: first check whether filename is valid or not to return appropiate error
+	// use os.Stat
+	f, err := os.Open(fileName)
+
+	if err != nil {
+		return nil, fmt.Errorf("Cannot open file %s", err)
+	}
+
+	var r io.Reader
+
+	if m.MaxCacheSize > 0 {
+		r = newCachingReader(f, m, key)
+	} else {
+		r = &closingReader{f}
+	}
+
+	var rc = io.ReadCloser(io.NopCloser(r))
+
+	return rc, nil
+}
+
+// closingReader provides a Reader that automatically closes the
+// embedded ReadCloser when it reaches EOF
+type closingReader struct {
+	rc io.ReadCloser
+}
+
+func (cr closingReader) Read(p []byte) (int, error) {
+	n, err := cr.rc.Read(p)
+	if err == io.EOF {
+		if closeErr := cr.rc.Close(); closeErr != nil {
+			return n, closeErr // close must succeed for Read to succeed
+		}
+	}
+	return n, err
+}
+
+// this denotes a reader which also caches the data as it reads this in case when size
+// of the cache is greater than 0
+type cachingReader struct {
+	f   *os.File
+	m   *Memoria
+	key string
+	buf *bytes.Buffer
+}
+
+func newCachingReader(f *os.File, m *Memoria, key string) io.Reader {
+	return &cachingReader{
+		f:   f,
+		m:   m,
+		key: key,
+		buf: &bytes.Buffer{},
+	}
+}
+
+// read interface for io.Reader
+func (c *cachingReader) Read(p []byte) (int, error) {
+	n, err := c.f.Read(p)
+
+	if err == nil {
+		return c.buf.Write(p[0:n]) // write must succedd for read to succed
+	}
+
+	if err == io.EOF {
+		if err := c.m.cacheWithoutLock(c.key, c.buf.Bytes()); err != nil {
+			return n, err
+		} // cache may fail
+
+		if closeErr := c.f.Close(); closeErr != nil {
+			return n, closeErr
+		}
+	}
+
+	return n, err
+
+}
+
 func (m *Memoria) pathFor(pathkey *PathKey) string {
 	return filepath.Join(m.Basedir, filepath.Join(pathkey.Path...))
 }
 func (m *Memoria) completePath(path *PathKey) string {
 	return filepath.Join(m.pathFor(path), path.FileName)
+}
+
+// cache the give key-value pain
+func (m *Memoria) cacheWithLock(key string, val []byte) error {
+	m.emptyCacheFor(key) // remove the cache if it already exists
+
+	valueSize := uint64(len(val))
+
+	if err := m.makeSpace(valueSize); err != nil {
+		return fmt.Errorf("%s; cannot cache", err)
+	}
+
+	if err := m.cachePolicy.Insert(m, key, val); err != nil {
+		return fmt.Errorf("%s; cannot insert", err)
+	}
+	return nil
+}
+
+func (m *Memoria) makeSpace(valueSize uint64) error {
+	if valueSize > m.MaxCacheSize {
+		return fmt.Errorf("value size (%d bytes) is too large for cache (%d bytes)", valueSize, m.MaxCacheSize)
+	}
+	// how much space we need
+	spaceNeeded := (m.cacheSize + valueSize) - m.MaxCacheSize
+	return m.cachePolicy.Eject(m, spaceNeeded)
+}
+
+// aquires the store's mutex and calls Lock
+func (m *Memoria) cacheWithoutLock(key string, val []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.cacheWithLock(key, val)
 }
 
 // If you do compression you need both write and close interfaces so the
