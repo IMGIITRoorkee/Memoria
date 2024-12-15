@@ -21,32 +21,6 @@ var (
 	defaultTransform = func(s string) *PathKey { return &PathKey{Path: []string{}, FileName: s} }
 )
 
-type defaultCachePolicy struct{}
-
-func (dc *defaultCachePolicy) Eject(m *Memoria, requriedSpace uint64) error {
-	spaceFreed := uint64(0)
-	for key, val := range m.cache {
-		if spaceFreed >= requriedSpace {
-			break
-		}
-		valSize := uint64(len(val))
-		m.cacheSize -= valSize
-		delete(m.cache, key)
-		spaceFreed += valSize
-	}
-	return nil
-}
-
-func (dc *defaultCachePolicy) Insert(m *Memoria, key string, val []byte) error {
-	valueSize := uint64(len(val))
-	if m.cacheSize+valueSize > m.MaxCacheSize {
-		return fmt.Errorf("defaultCachePolicy: Failded to make room for value (%d/%d)", valueSize, m.MaxCacheSize)
-	}
-	m.cache[key] = val
-	m.cacheSize += valueSize
-	return nil
-}
-
 type PathKey struct {
 	Path        []string
 	FileName    string
@@ -56,11 +30,6 @@ type PathKey struct {
 // A Path transform function converts "abcdef" to ["ab","cde","f"]
 // so the final  location of the data file will be <basedir>/ab/cde/f/abcdef
 type PathTransform func(key string) *PathKey
-
-type CachePolicy interface {
-	Eject(m *Memoria, requriedSpace uint64) error
-	Insert(m *Memoria, key string, val []byte) error
-}
 
 type Options struct {
 	MaxCacheSize uint64
@@ -157,7 +126,7 @@ func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
 		return fmt.Errorf("cannot create key file: %s", err)
 	}
 
-	wc := io.WriteCloser(&nopWriteCloser{})
+	wc := io.WriteCloser(&nopWriteCloser{f})
 
 	//TODO: replace wc with compression writer when implementing compression
 
@@ -171,12 +140,11 @@ func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
 		return cleanUp(f, fmt.Errorf("Cannot close compression error %s", err))
 	}
 
-	//TODO NOW: Add bug here
-	if sync {
-		if err := f.Sync(); err != nil {
-			cleanUp(f, fmt.Errorf("Cannot Sync: %s", err))
-		}
-	}
+	// if sync {
+	// 	if err := f.Sync(); err != nil {
+	// 		cleanUp(f, fmt.Errorf("Cannot Sync: %s", err))
+	// 	}
+	// }
 	if err := f.Close(); err != nil {
 		return fmt.Errorf("Cannot close file: %s", err)
 	}
