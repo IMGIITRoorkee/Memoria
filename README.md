@@ -2,7 +2,8 @@
 Memoria is a key-value store. This is a fairly simple implementation of a key-value store, meant for beginners who do not have much experience in writing Go. You can contribute to this to get a feel for key value stores and cache systems. Once you read the codebase and solve some issues you are welcome to move onto the advanced version which introduces you to new concepts like **client-server** architectures, **pubsub** and more!.
 
 It provides a simple API for storing arbitrary data on the filesystem by key. What is API you may ask? An API is nothing but a way to interact with the program. 
-In the simple format we introduce you to some basic datastructures and basic golang primitives like writers,channels, Mutexes etc. 
+In the simple format we introduce you to some basic datastructures. Don't worry all the content 
+requried to implement those datastructure will be provided
 
 
 
