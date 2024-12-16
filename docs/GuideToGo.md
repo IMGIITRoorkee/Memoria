@@ -45,7 +45,7 @@ go version
    Explore hash tables, the foundational data structure for key-value stores.
 
 ---
-
+<!---
 ### **Building APIs in Go**
 
 APIs allow interaction between Memoria and other applications. Learn to build and work with APIs:
@@ -57,7 +57,7 @@ APIs allow interaction between Memoria and other applications. Learn to build an
    Go’s official documentation for building HTTP-based APIs.
 
 ---
-
+--->
 ### **Caching Systems**
 
 Caching is key to efficient data retrieval. Learn more here:
@@ -70,7 +70,7 @@ Caching is key to efficient data retrieval. Learn more here:
 3. **[Understanding Caching in Go](https://mayurkhante786.medium.com/understanding-caching-in-go-part-1-improving-performance-and-efficiency-f9391e2d7047)**
 
 ---
-
+<!---
 ## 🚀 Advanced Topics
 
 Once you’re comfortable with the basics, explore these advanced topics relevant to Memoria’s future enhancements:
@@ -85,7 +85,7 @@ Once you’re comfortable with the basics, explore these advanced topics relevan
    Learn about implementing sorted sets, which are key to advanced data structures.
 
 ---
-
+--->
 ## 🎥 Video Tutorials
 
 1. **[Golang Full Course - TechWorld with Nana](https://www.youtube.com/watch?v=yyUHQIec83I)**  
