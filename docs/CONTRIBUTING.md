@@ -39,7 +39,7 @@ Thank you for considering contributing to Memoria! Please review the guidelines 
 
 ## Looking for Guidance?
 
-- Read our **[Guide to Go](docs/GuideToGo.md)**.
+- Read our **[Guide to Go](GuideToGo.md)**.
 - Check existing implementations for reference.
 - Join our **Discord Server**: [MergeFest Discord](https://discord.gg/aKaEbaVYKf).
   - Visit the **#go** channel.
