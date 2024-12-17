@@ -56,9 +56,7 @@ func main() {
     db, err := memoria.Open(
         memoria.Options {
             CacheSizeMax: 1024*1024, // the cache has a size of 10 Megabytes
-            CacheType: memoria.CacheType.FIFO, // type of cache ejection/retention scheme learn more about it in caches.
             PathTransform: func() *memoria.PathKey {} // this is some function to convert the path of data in the file systems to some meaningfull value like content addressable strings etc. m,
-            DataStructure: nil
         }, // set para
         memoria.WithDir("path_to_db")
     )
@@ -84,7 +82,20 @@ func main() {
 }
 ```
 
-## DataStrucutures API
+## Resources to Learn Go
+
+We provide a comprehensive guide for learning Go specifically tailored for this project. Check out our [Guide to Go](docs/GuideToGo.md) which covers:
+
+- Setting up Go development environment
+- Basic Go syntax and concepts
+- Data structures in Go
+- Testing in Go
+- Best practices for this project
+- Recommended learning resources
+
+The guide is designed to help contributors get started with Go development and understand the codebase better.
+
+## DataStrucutures API (Will be done when all the previous issues will be solved)
 
 Implemeting datastructure will be hard and a lot of points. So if you want a challenge and do something interesting. Initiative is key so if you want to do this and want a little help reach out to me on discord or slack!.
 
@@ -138,15 +149,4 @@ More operations which will be added like `PeekMax`,`PopMax`,`PopMin` etc.
 
 ---
 
-## Resources to Learn Go
 
-We provide a comprehensive guide for learning Go specifically tailored for this project. Check out our [Guide to Go](docs/GuideToGo.md) which covers:
-
-- Setting up Go development environment
-- Basic Go syntax and concepts
-- Data structures in Go
-- Testing in Go
-- Best practices for this project
-- Recommended learning resources
-
-The guide is designed to help contributors get started with Go development and understand the codebase better.
