@@ -140,11 +140,11 @@ func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
 		return cleanUp(f, fmt.Errorf("Cannot close compression error %s", err))
 	}
 
-	// if sync {
-	// 	if err := f.Sync(); err != nil {
-	// 		cleanUp(f, fmt.Errorf("Cannot Sync: %s", err))
-	// 	}
-	// }
+	if sync {
+		if err := f.Sync(); err != nil {
+			cleanUp(f, fmt.Errorf("Cannot Sync: %s", err))
+		}
+	}
 	if err := f.Close(); err != nil {
 		return fmt.Errorf("Cannot close file: %s", err)
 	}
