@@ -10,6 +10,7 @@ A **mutex** (mutual exclusion) is like a **key to the cookie jar**. Only one per
 ## **Mutex vs Semaphore: What’s the Difference?**  
 Let’s say you have two scenarios:  
 
+
 1. **The Cookie Jar (Mutex):**  
    Only one person can take cookies at a time. This is what a **mutex** does — it ensures **exclusive access** to shared resources.  
 
