@@ -150,3 +150,94 @@ More operations which will be added like `PeekMax`,`PopMax`,`PopMin` etc.
 ---
 
 
+## Some simple primitive methods : 
+
+  - [Read Operation](#)
+  - [Write Operation](#write-operation)
+  - [Keys Operation](#keys-operation)
+  - [Erase Operation](#erase-operation)
+  - [Put Operation](#put-operation)
+---
+1) Read Operation
+---
+```
+package main
+
+import "fmt"
+
+func main() {
+    // Example data
+    data := map[string]string{
+        "key1": "value1",
+        "key2": "value2",
+    }
+
+    // Reading a value by key
+    value, exists := data["key1"]
+    if exists {
+        fmt.Println("Read value:", value) // Output: value1
+    } else {
+        fmt.Println("Key not found")
+    }
+}
+```
+2) Wrire Operation
+```
+package main
+
+import "fmt"
+
+func main() {
+    // Example data
+    data := map[string]string{
+        "key1": "value1",
+        "key2": "value2",
+    }
+
+    // Reading a value by key
+    value, exists := data["key1"]
+    if exists {
+        fmt.Println("Read value:", value) // Output: value1
+    } else {
+        fmt.Println("Key not found")
+    }
+}
+```
+3) Write Operation
+```
+package main
+
+import "fmt"
+
+func main() {
+    // Creating an empty map
+    data := make(map[string]string)
+
+    // Writing data to the map
+    data["key1"] = "value1"
+    fmt.Println("Data after write:", data) // Output: map[key1:value1]
+}
+```
+4) Keys Operation
+```
+package main
+
+import "fmt"
+
+func main() {
+    // Example data
+    data := map[string]string{
+        "key1": "value1",
+        "key2": "value2",
+    }
+
+    // Retrieving all keys
+    fmt.Println("Keys in the map:")
+    for key := range data {
+        fmt.Println(key)
+    }
+    // Output:
+    // key1
+    // key2
+}
+```
