@@ -103,15 +103,13 @@ func (m *Memoria) Write(key string, val []byte) error {
 
 // writes the data given by the io.reader  performs explicit sync if mentioned otherwise
 // depedning on the physical media it sync
-func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
 
+func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
 	if len(key) <= 0 {
 		return fmt.Errorf("Empty key")
 	}
 
 	pathKey := m.transform(key)
-
-	//TODO: check for bad paths check if any part contains / after being transformed
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -120,47 +118,48 @@ func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
 		return fmt.Errorf("Cannot create directory: %s", err)
 	}
 
-	f, err := m.createKeyFile(pathKey)
-
+	// created a temp file
+	tmpFile, err := os.CreateTemp(m.pathFor(pathKey), "tmp-*")
 	if err != nil {
-		return fmt.Errorf("cannot create key file: %s", err)
+		return fmt.Errorf("Cannot create temporary file: %s", err)
+	}
+	defer func() {
+		if _, err := os.Stat(tmpFile.Name()); err == nil {
+			os.Remove(tmpFile.Name()) // Cleanup temporary file
+		}
+	}()
+
+	// wrote data(in temp file)
+	if _, err := io.Copy(tmpFile, r); err != nil {
+		return cleanUp(tmpFile, fmt.Errorf("Cannot copy from read buffer: %s", err))
 	}
 
-	wc := io.WriteCloser(&nopWriteCloser{f})
-
-	//TODO: replace wc with compression writer when implementing compression
-
-	// this is the place where data transfers actually happens when
-	// we transfer a read buffer to a writer
-	if _, err := io.Copy(wc, r); err != nil {
-		return cleanUp(f, fmt.Errorf("Cannot copy from read buffer %s", err))
+	// close the temporary file
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("Cannot close temporary file: %s", err)
 	}
 
-	if err := wc.Close(); err != nil {
-		return cleanUp(f, fmt.Errorf("Cannot close compression error %s", err))
+	// renamed the temporary file to the target file
+	fullPath := m.completePath(pathKey)
+	if err := os.Rename(tmpFile.Name(), fullPath); err != nil {
+		return fmt.Errorf("Cannot rename temporary file to target file: %s", err)
 	}
 
-	// if sync {
-	// 	if err := f.Sync(); err != nil {
-	// 		cleanUp(f, fmt.Errorf("Cannot Sync: %s", err))
-	// 	}
-	// }
-	if err := f.Close(); err != nil {
-		return fmt.Errorf("Cannot close file: %s", err)
+	// optional sync to ensure data is written to disk
+	if sync {
+		f, err := os.Open(fullPath)
+		if err != nil {
+			return fmt.Errorf("Cannot open file for syncing: %s", err)
+		}
+		defer f.Close()
+
+		if err := f.Sync(); err != nil {
+			return fmt.Errorf("Cannot sync file: %s", err)
+		}
 	}
 
-	//Atomic Writes: uncomment the following code when implemented atomic writes
-	// fullPath := m.completePath(pathKey)
-
-	// if f.Name() != fullPath {
-	// 	if err := os.Rename(f.Name(), fullPath); err != nil {
-	// 		os.Remove(f.Name())
-	// 		return fmt.Errorf("Cannot rename files: %s", err)
-	// 	}
-	// }
-
-	// empty the cache for original key
-	m.emptyCacheFor(pathKey.originalKey) // cache is read only
+	// Clear the cache for the original key
+	m.emptyCacheFor(pathKey.originalKey)
 
 	return nil
 }
