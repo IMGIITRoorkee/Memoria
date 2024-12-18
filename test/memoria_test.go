@@ -104,7 +104,7 @@ func TestMemoriaWriteReadString(t1 *testing.T) {
 		{
 			name:    "Simple write and read (String Wrapper)",
 			key:     "test1",
-			value:   string("hello world"),
+			value:   string("Hello World!"),
 			wantErr: false,
 		},
 		{
