@@ -101,6 +101,11 @@ func (m *Memoria) Write(key string, val []byte) error {
 	return m.WriteStream(key, bytes.NewReader(val), false)
 }
 
+// WriteString is a wrapper for Write that takes a string and writes it as bytes
+func (m *Memoria) WriteString(key, val string) error {
+	return m.Write(key, []byte(val))
+}
+
 // writes the data given by the io.reader  performs explicit sync if mentioned otherwise
 // depedning on the physical media it sync
 func (m *Memoria) WriteStream(key string, r io.Reader, sync bool) error {
@@ -199,6 +204,15 @@ func (m *Memoria) Read(key string) ([]byte, error) {
 	}
 	defer rc.Close()
 	return io.ReadAll(rc)
+}
+
+// ReadString is a wrapper around Read that returns the value as a string
+func (m *Memoria) ReadString(key string) (string, error) {
+	val, err := m.Read(key)
+	if err != nil {
+		return "", err
+	}
+	return string(val), nil
 }
 
 // ReadStream takes the key and a bool byPassCache to bypass the cache and laziliy
