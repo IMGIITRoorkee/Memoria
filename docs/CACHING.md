@@ -213,11 +213,12 @@ By understanding caching concepts and policies, systems can be optimized for bot
 ---
 
 ## Cache Strategy of Project
-
+```
 type CachePolicy interface {
-	Eject(m *Memoria, requriedSpace uint64) error
-	Insert(m *Memoria, key string, val []byte) error
+    Eject(m *Memoria, requriedSpace uint64) error
+    Insert(m *Memoria, key string, val []byte) error
 }
+```
 - This structure describes our cache policy of erasing cached data and adding new cached data.
 
 func (dc *defaultCachePolicy) Eject(m *Memoria, requriedSpace uint64) error {
