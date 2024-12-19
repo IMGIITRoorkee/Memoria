@@ -81,17 +81,17 @@ func TestMemoriaWriteRead(t *testing.T) {
 	}
 }
 
-func TestMemoriaWriteReadString(t1 *testing.T) {
+func TestMemoriaWriteReadString(t *testing.T) {
 
 	// Create temporary directory for tests
-	tempDir1, err1 := os.MkdirTemp("", "memoria-test-*")
-	if err1 != nil {
-		t1.Fatalf("Failed to create temp dir: %v", err1)
+	tempDir, err := os.MkdirTemp("", "memoria-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir1)
+	defer os.RemoveAll(tempDir)
 
 	m := memoria.New(memoria.Options{
-		Basedir:      tempDir1,
+		Basedir:      tempDir,
 		MaxCacheSize: 1024,
 	})
 
@@ -127,29 +127,29 @@ func TestMemoriaWriteReadString(t1 *testing.T) {
 		},
 	}
 
-	for _, tt1 := range tests {
-		t1.Run(tt1.name, func(t1 *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 
 			// Test WriteString
-			err1 := m.WriteString(tt1.key, tt1.value)
-			if (err1 != nil) != tt1.wantErr {
-				t1.Errorf("Write() error = %v, wantErr %v", err1, tt1.wantErr)
+			err := m.WriteString(tt.key, tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
-			if tt1.wantErr {
+			if tt.wantErr {
 				return
 			}
 
 			// Test ReadString
-			got1, err1 := m.ReadString(tt1.key)
-			if err1 != nil {
-				t1.Errorf("Read() error = %v", err1)
+			got, err := m.ReadString(tt.key)
+			if err != nil {
+				t.Errorf("Read() error = %v", err)
 				return
 			}
 
-			if got1 != tt1.value {
-				t1.Errorf("Read() got = %v, want %v", got1, tt1.value)
+			if got != tt.value {
+				t.Errorf("Read() got = %v, want %v", got, tt.value)
 			}
 		})
 	}
