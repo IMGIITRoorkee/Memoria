@@ -376,3 +376,49 @@ func cleanUp(file *os.File, onCleanUpError error) error {
 	}
 	return fmt.Errorf("%s ..Files Cleaned!", onCleanUpError)
 }
+
+// Implementing Concurrent Bulk Write Operations using Go Routines
+
+type WriteResult struct {
+	Key   string
+	Error error
+}
+
+func (m *Memoria) BulkWrite(pairs map[string][]byte) []WriteResult {
+	var wg sync.WaitGroup
+	results := make([]WriteResult, 0, len(pairs)) //To store results of each write op and also I've kept its size equal to no. of pairs
+	var mu sync.Mutex
+
+	mu.Lock()
+
+	//Creating channel for goroutines
+	resultChan := make(chan WriteResult, len(pairs)) //Hence the Buffer size in channel is no. of pairs
+
+	//Implementing goroutines
+	for key, value := range pairs {
+		wg.Add(1)
+		go func(key string, value []byte) {
+			defer wg.Done()
+
+			err := m.Write(key, value)
+
+			// Capture the result and send it to the result channel
+			resultChan <- WriteResult{
+				Key:   key,
+				Error: err,
+			}
+		}(key, value)
+	}
+	go func() {
+		wg.Wait()
+		close(resultChan) //To close the channel once all the goroutines are completed
+	}()
+
+	for result := range resultChan {
+		results = append(results, result)
+	}
+	mu.Unlock()
+
+	return results
+
+}
