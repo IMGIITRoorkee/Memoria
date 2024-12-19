@@ -46,15 +46,15 @@ Cache trades off space for speed.
 ### Default: Random Removal
 - **Description**: This cache policiy facilitates random removal of cached data to make space for new data.
 - **Advantages** :
-1) It is easy and simple to implement.
-2) It requires minimum system requirements for its implementation.
+    1) It is easy and simple to implement.
+    2) It requires minimum system requirements for its implementation.
 - **Disadvantages**:
-1) It lacks the ability to adapt to various types of systems.
-2) It may lead to removal of frequently accessed items, thus putting a load on system.
+    1) It lacks the ability to adapt to various types of systems.
+    2) It may lead to removal of frequently accessed items, thus putting a load on system.
 - **Use Cases**: 
-1) Non-Critical Caching Environments: It is used in scenarios where the impact of cache misses is minimal or where caching is employed for non-critical purposes, such as temporary storage of non-essential data, random replacement can be sufficient.
-2) Simulation and Testing: It is employed in testing situations and simulation environments where simplicity and convenience of use are more important rather than complex eviction policies.
-3) Resource-Constrained Systems: It is used in resource-constrained environments where computational resources are limited.
+    1) Non-Critical Caching Environments: It is used in scenarios where the impact of cache misses is minimal or where caching is employed for non-critical purposes, such as temporary storage of non-essential data, random replacement can be sufficient.
+    2) Simulation and Testing: It is employed in testing situations and simulation environments where simplicity and convenience of use are more important rather than complex eviction policies.
+    3) Resource-Constrained Systems: It is used in resource-constrained environments where computational resources are limited.
 - **Diagram**:
   ```plaintext
   [A] [B] [C] [D] -> Cache Full -> Remove Random -> [A] [C] [D]
@@ -65,16 +65,16 @@ Cache trades off space for speed.
 ### FIFO (First In, First Out)
 - **Description**: This policy advocates the removal of the oldest stored data first to make space for new data.
 - **Advantages** :
-1) Simple Implementation: FIFO is straightforward to implement.
-2) Predictable Behavior: The eviction process in FIFO is predictable and follows a strict time based order.
-3) Memory Efficiency: It is memory efficient as it eliminates the need for extra tracking of timestamps.
+    1) Simple Implementation: FIFO is straightforward to implement.
+    2) Predictable Behavior: The eviction process in FIFO is predictable and follows a strict time based order.
+    3) Memory Efficiency: It is memory efficient as it eliminates the need for extra tracking of timestamps.
 - **Disadvantages**:
-1) Lack of Adaptability: FIFO may not adapt well to varying access patterns as it strictly adheres to the order.
-2) Inefficiency in Handling Variable Importance: FIFO might lead to inefficiencies when older items are more relevant or frequently accessed than newer ones.
+    1) Lack of Adaptability: FIFO may not adapt well to varying access patterns as it strictly adheres to the order.
+    2) Inefficiency in Handling Variable Importance: FIFO might lead to inefficiencies when older items are more relevant or frequently accessed than newer ones.
 - **Use Case**: It is Suited for sequential data where older entries are less likely to be reused.
-1) Task Scheduling in Operating Systems: In task scheduling, FIFO can be employed to determine the order in which processes or tasks are executed.
-2) Message Queues: FIFO gis employed in essaging systems to make sure they are stored in the order they are received.
-3) Cache for Streaming Applications: FIFO is employed in streaming applications as it guarantees that frames are displayed in the proper order in a video streaming cache.
+    1) Task Scheduling in Operating Systems: In task scheduling, FIFO can be employed to determine the order in which processes or tasks are executed.
+    2) Message Queues: FIFO gis employed in essaging systems to make sure they are stored in the order they are received.
+    3) Cache for Streaming Applications: FIFO is employed in streaming applications as it guarantees that frames are displayed in the proper order in a video streaming cache.
 - **Diagram**:
   ```plaintext
   Cache: [A] [B] [C]
@@ -97,17 +97,17 @@ Cache trades off space for speed.
 ### LRU (Least Recently Used)
 - **Description**: This cache policy removes the data that hasn’t been used for the longest time.
 - **Advantages**: 
-1) Easy Implementation: LRU is a simple and easy to implement.
-2) Efficiency: LRU is efficient when current accesses records are a reliable indicator of future accesses.
-3) Adaptability: LRU is adaptable to various applications, including databases, web caching, and file systems.
+    1) Easy Implementation: LRU is a simple and easy to implement.
+    2) Efficiency: LRU is efficient when current accesses records are a reliable indicator of future accesses.
+    3) Adaptability: LRU is adaptable to various applications, including databases, web caching, and file systems.
 - **Disadvantages**:
-1) Strict Ordering: LRU assumes that the order of access accurately reflects the future usefulness of an item, which may not always hold true.
-2) Cold Start Issues: When a syatem is initially started, LRU might not have desired functionality as it requires historical data to remove cache.
-3) Memory Overhead: Implementing LRU requires additional memory to store timestamps of access order.
+    1) Strict Ordering: LRU assumes that the order of access accurately reflects the future usefulness of an item, which may not always hold true.
+    2) Cold Start Issues: When a syatem is initially started, LRU might not have desired functionality as it requires historical data to remove cache.
+    3) Memory Overhead: Implementing LRU requires additional memory to store timestamps of access order.
 - **Use Case**: Commonly used for systems with temporal locality of reference.
-1) Web Caching: LRU is employed to store frequently accessed web pages, images, or resources.
-2) Database Management: LRU is often used in database systems to cache query results or frequently accessed data pages.
-3) File Systems: File systems use LRU when caching file metadata or directory information as caching frequently accessed files and directories improves file access speed and reduces the load on the underlying storage.
+    1) Web Caching: LRU is employed to store frequently accessed web pages, images, or resources.
+    2) Database Management: LRU is often used in database systems to cache query results or frequently accessed data pages.
+    3) File Systems: File systems use LRU when caching file metadata or directory information as caching frequently accessed files and directories improves file access speed and reduces the load on the underlying storage.
 - **Diagram**:
   ```plaintext
   Cache: [A] [B] [C]
@@ -134,13 +134,13 @@ Cache trades off space for speed.
 ### LFU (Least Frequently Used)
 - **Description**: This cache policy removes the data that has been used for the least number of times.
 - **Advantages**: 
-1) Adaptability to Varied Access Patterns: LFU is effective in scenarios where some items may be accessed infrequently but are still essential. It adapts well to varying access patterns.
-2) Optimized for Long-Term Trends: LFU can be beneficial when the relevance of an item is better captured by its overall frequency of access over time rather than recent accesses.
-3) Low Memory Overhead: Since LFU doesn't need to keep timestamps, it might have less memory overhead than some LRU implementations.
+    1) Adaptability to Varied Access Patterns: LFU is effective in scenarios where some items may be accessed infrequently but are still essential. It adapts well to varying access patterns.
+    2) Optimized for Long-Term Trends: LFU can be beneficial when the relevance of an item is better captured by its overall frequency of access over time rather than recent accesses.
+    3) Low Memory Overhead: Since LFU doesn't need to keep timestamps, it might have less memory overhead than some LRU implementations.
 - **Disadvantages**:
-1) Sensitivity to Initial Access:LFU relies on historical access patterns, so it may remove new or less frequently used data which might be used frequently in future.
-2) Difficulty in Handling Changing Access Patterns: LFU can struggle in scenarios where access patterns constantly change with time.
-3) Complexity of Frequency Counters: Implementing accurate frequency counters can make LFU implementation complex.
+    1) Sensitivity to Initial Access:LFU relies on historical access patterns, so it may remove new or less frequently used data which might be used frequently in future.
+    2) Difficulty in Handling Changing Access Patterns: LFU can struggle in scenarios where access patterns constantly change with time.
+    3) Complexity of Frequency Counters: Implementing accurate frequency counters can make LFU implementation complex.
 - **Use Case**: 
     1) Database Query Caching: LFU can be applied in DBMS to cache query results or frequently accessed data.
     2) Network Routing Tables: LFU is useful in caching routing information for networking applications. Items representing less frequently used routes are kept in the cache, allowing for efficient routing decisions based on historical usage.
