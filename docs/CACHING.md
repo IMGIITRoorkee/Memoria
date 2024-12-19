@@ -142,9 +142,9 @@ Cache trades off space for speed.
 2) Difficulty in Handling Changing Access Patterns: LFU can struggle in scenarios where access patterns constantly change with time.
 3) Complexity of Frequency Counters: Implementing accurate frequency counters can make LFU implementation complex.
 - **Use Case**: 
-1) Database Query Caching: LFU can be applied in DBMS to cache query results or frequently accessed data.
-2) Network Routing Tables: LFU is useful in caching routing information for networking applications. Items representing less frequently used routes are kept in the cache, allowing for efficient routing decisions based on historical usage.
-3) Content Recommendations: In content recommendation systems, LFU can be employed to cache information about user preferences or content suggestions. It ensures that even less frequently accessed recommendations are considered over time.
+    1) Database Query Caching: LFU can be applied in DBMS to cache query results or frequently accessed data.
+    2) Network Routing Tables: LFU is useful in caching routing information for networking applications. Items representing less frequently used routes are kept in the cache, allowing for efficient routing decisions based on historical usage.
+    3) Content Recommendations: In content recommendation systems, LFU can be employed to cache information about user preferences or content suggestions. It ensures that even less frequently accessed recommendations are considered over time.
 - **Diagram**:
   ```plaintext
   Cache: [A] [B] [C]
@@ -213,14 +213,16 @@ By understanding caching concepts and policies, systems can be optimized for bot
 ---
 
 ## Cache Strategy of Project
+- The structure below describes our cache policy of erasing cached data and adding new cached data.
 ```
 type CachePolicy interface {
     Eject(m *Memoria, requriedSpace uint64) error
     Insert(m *Memoria, key string, val []byte) error
 }
 ```
-- This structure describes our cache policy of erasing cached data and adding new cached data.
 
+- The function below is about erasing cached data to match the space requirement as specified.
+```
 func (dc *defaultCachePolicy) Eject(m *Memoria, requriedSpace uint64) error {
 	spaceFreed := uint64(0)
 	for key, val := range m.cache {
@@ -234,8 +236,9 @@ func (dc *defaultCachePolicy) Eject(m *Memoria, requriedSpace uint64) error {
 	}
 	return nil
 }
-- This function is about erasing cached data to match the space requirement as specified.
-
+```
+- The function below is about adding new cached data within the limit of available space.
+```
 func (dc *defaultCachePolicy) Insert(m *Memoria, key string, val []byte) error {
 	valueSize := uint64(len(val))
 	if m.cacheSize+valueSize > m.MaxCacheSize {
@@ -245,6 +248,7 @@ func (dc *defaultCachePolicy) Insert(m *Memoria, key string, val []byte) error {
 	m.cacheSize += valueSize
 	return nil
 }
-- This function is about adding new cached data within the limit of available space.
+```
+
 
 - Here we obsereve that this cache eviction policy is not standard one like FIFO,LRU,LFU, etc. but a space based eviction strategy where the erased cached data is to measure the space requirement irrespective of the track of frequency, time, date of access, etc.
