@@ -384,31 +384,44 @@ type WriteResult struct {
 	Error error
 }
 
-func (m *Memoria) BulkWrite(pairs map[string][]byte) []WriteResult {
+func (m *Memoria) BulkWrite(pairs map[string][]byte, numWorkers int) []WriteResult { // I've taken the number of workers as an argument so that we've a control over how many goroutines we wanna use
+
 	var wg sync.WaitGroup
 	results := make([]WriteResult, 0, len(pairs)) //To store results of each write op and also I've kept its size equal to no. of pairs
-	var mu sync.Mutex
 
-	mu.Lock()
+	// Channel for Worker Pool
+	workChan := make(chan struct {
+		key   string
+		value []byte
+	}, len(pairs))
 
 	//Creating channel for goroutines
-	resultChan := make(chan WriteResult, len(pairs)) //Hence the Buffer size in channel is no. of pairs
+	resultChan := make(chan WriteResult, len(pairs)) //Hence, the Buffer size in channel is equal to the no. of pairs
 
-	//Implementing goroutines
-	for key, value := range pairs {
-		wg.Add(1)
-		go func(key string, value []byte) {
-			defer wg.Done()
-
-			err := m.Write(key, value)
-
-			// Capture the result and send it to the result channel
-			resultChan <- WriteResult{
-				Key:   key,
-				Error: err,
+	// Worker pool
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			for task := range workChan {
+				err := m.Write(task.key, task.value)
+				resultChan <- WriteResult{
+					Key:   task.key,
+					Error: err,
+				}
 			}
-		}(key, value)
+		}()
 	}
+
+	// Feeding tasks to the work channel
+	go func() {
+		for key, value := range pairs {
+			workChan <- struct {
+				key   string
+				value []byte
+			}{key, value}
+		}
+		close(workChan) // To close the work channel once all tasks are fed
+	}()
+
 	go func() {
 		wg.Wait()
 		close(resultChan) //To close the channel once all the goroutines are completed
@@ -417,7 +430,6 @@ func (m *Memoria) BulkWrite(pairs map[string][]byte) []WriteResult {
 	for result := range resultChan {
 		results = append(results, result)
 	}
-	mu.Unlock()
 
 	return results
 
