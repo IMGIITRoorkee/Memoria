@@ -400,7 +400,9 @@ func (m *Memoria) BulkWrite(pairs map[string][]byte, numWorkers int) []WriteResu
 
 	// Worker pool
 	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for task := range workChan {
 				err := m.Write(task.key, task.value)
 				resultChan <- WriteResult{
