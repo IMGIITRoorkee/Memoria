@@ -376,3 +376,63 @@ func cleanUp(file *os.File, onCleanUpError error) error {
 	}
 	return fmt.Errorf("%s ..Files Cleaned!", onCleanUpError)
 }
+
+// Implementing Concurrent Bulk Write Operations using Go Routines
+
+type WriteResult struct {
+	Key   string
+	Error error
+}
+
+func (m *Memoria) BulkWrite(pairs map[string][]byte, numWorkers int) []WriteResult { // I've taken the number of workers as an argument so that we've a control over how many goroutines we wanna use
+
+	var wg sync.WaitGroup
+	results := make([]WriteResult, 0, len(pairs)) //To store results of each write op and also I've kept its size equal to no. of pairs
+
+	// Channel for Worker Pool
+	workChan := make(chan struct {
+		key   string
+		value []byte
+	}, len(pairs))
+
+	//Creating channel for goroutines
+	resultChan := make(chan WriteResult, len(pairs)) //Hence, the Buffer size in channel is equal to the no. of pairs
+
+	// Worker pool
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for task := range workChan {
+				err := m.Write(task.key, task.value)
+				resultChan <- WriteResult{
+					Key:   task.key,
+					Error: err,
+				}
+			}
+		}()
+	}
+
+	// Feeding tasks to the work channel
+	go func() {
+		for key, value := range pairs {
+			workChan <- struct {
+				key   string
+				value []byte
+			}{key, value}
+		}
+		close(workChan) // To close the work channel once all tasks are fed
+	}()
+
+	go func() {
+		wg.Wait()
+		close(resultChan) //To close the channel once all the goroutines are completed
+	}()
+
+	for result := range resultChan {
+		results = append(results, result)
+	}
+
+	return results
+
+}
