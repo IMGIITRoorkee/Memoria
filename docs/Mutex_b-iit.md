@@ -1,11 +1,11 @@
 # What is a Mutex ? (by b-iit : [https://github.com/b-iit])
 
 ## Introduction
-Imagine you’re at a metro station, standing in a line trying to enter the metro, one by one. And then there is the guard there which ensures a proper queue and allows everyone to enter inside the train. In programming, a **mutex** (short for "mutual exclusion") works a lot like that guard. It ensures that only one thread (or "person") accesses a critical section (or "enter inside") at a time.
+Imagine you’re at a metro station, standing in a line trying to enter the metro, one by one. And then a guard is there which ensures a proper queue and allows everyone to enter inside the metro. In programming, a **mutex** (short for "mutual exclusion") works a lot like that guard. It ensures that only one thread (or "person") accesses a critical section (or "enter inside") at a time.
 
 This is especially important in low-level programming languages like **Go (Golang)** or **Rust**, where you deal with **multi-threading** — allowing different parts of a program to run simultaneously. Multi-threading is everywhere when you need two or more operations to be performed simultaneously, i.e. in web servers handling multiple requests, databases managing transactions, or video games running physics and rendering together.
 
-But, when multiple threads try to access and change the same piece of data at the same time, it leads to a problem called a **race condition**, which leads to subsequent errors in the execution of the program. Think of two kpersons trying to enter through a single door—someone might get hurt. That’s where mutexes and similar mechanisms come in handy.
+But, when multiple threads try to access and change the same piece of data at the same time, it leads to a problem called a **race condition**, which leads to subsequent errors in the execution of the program. Think of two persons trying to enter through a single door—someone might get hurt. That’s where mutexes and similar mechanisms come in to play.
 
 ---
 
@@ -14,26 +14,28 @@ A **mutex** is like a lock for your data. Here’s how it works:
 1. When a thread wants to access a shared resource, it "locks" the mutex.
 2. While the mutex is locked, no other thread can access the resource.
 3. When the thread is done, it "unlocks" the mutex, allowing the next thread to use the resource.
-Thus, it can be said that, mutual exclusion (mutex) is a property of concurrency control, which is implemented to prevent race conditions. It is the requirement that one thread of execution never enters a critical section while a concurrent thread of execution is already accessing said critical section, which refers to an interval of time during which a thread of execution accesses a shared resource or shared memory.
+   
+Thus, it can be said that, mutual exclusion (mutex) is a property of concurrency control, which is implemented to prevent race conditions.
 
 ### Example in Everyday Life
-Imagine there’s one Phone booth on a street:
-    - When someone enters, they lock the door and talk on the phone (mutex locked).
-    - Others must wait until the call is done (mutex unlocked).
-    - This ensures privacy and order.
+- Imagine there is one Phone booth on a street:
+- When someone enters, they close the door and talk on the phone.
+- Others must wait until the call is done.
+- This ensures privacy and order.
 
+This explains how mutexes work.
 In programming, mutexes are used to maintain this kind of order for shared resources. It becomes very important to enforce Mutex on uni-processor systems to ensure the program runs error-free.
 
 ---
 
 ## How to enforce Mutual Exclusion ?
 Mutexes can be enforced in a program mainly two ways:
-- ### Hardware solutions :###
-1) On uni-processor systems, the simplest solution to achieve mutual exclusion is to disable interrupts during a process's critical section. This will prevent any interrupt service routines from running (effectively preventing a process from being preempted). Effective, but it may lead to many other problems, for example, if a process halts during its critical section, control will never return to another process, effectively halting the entire system. A more elegant method for achieving mutual exclusion is the busy-wait.
-2) Busy-waiting technique is effective for both uniprocessor and multiprocessor systems. In this technique shared memory and an atomic test-and-set instruction provide the mutual exclusion.
-3) Compare-And-Swap (CAS). CAS can be used to achieve wait-free mutual exclusion for any shared data structure by creating a linked list where each node represents the desired operation to be performed. CAS is then used to change the pointers in the linked list during the insertion of a new node. Only one process can be successful in its CAS; all other processes attempting to add a node at the same time will have to try again.
+- ### Hardware solutions :
+1) On uni-processor systems, the simplest solution to achieve mutual exclusion is to **disable interrupts** during a process's critical section. This will prevent any interruption to current service routines running.
+2) **Busy-waiting technique** is effective for both uniprocessor and multiprocessor systems. In this technique shared memory and an atomic test-and-set instruction provide the mutual exclusion.
+3) **Compare-And-Swap (CAS)** can be used to achieve wait-free mutual exclusion for any shared data structure by creating a linked list where each node represents the desired operation to be performed. CAS is then used to change the pointers in the linked list during the insertion of a new node. Only one process can be successful in its CAS; all other processes attempting to add a node at the same time will have to try again.
 
-- ### Software solutions :###
+- ### Software solutions :
 In addition to hardware-supported solutions, we can employ various algorithms to achieve mutual exclusion. Examples include:
 1) Dekker's algorithm
 2) Peterson's algorithm
@@ -45,7 +47,7 @@ In addition to hardware-supported solutions, we can employ various algorithms to
 - It is often preferable to use synchronization facilities provided by an operating system's multithreading library, which will take advantage of hardware solutions if possible but will use software solutions if no hardware solutions exist. 
 
 
-## Types of Mutexes##
+## Types of Mutexes
 
 1) Semaphores
 2) Readers–writer locks
@@ -54,7 +56,7 @@ In addition to hardware-supported solutions, we can employ various algorithms to
 5) Message passing
 6) Tuple space
 
-- Many forms of mutual exclusion have side-effects. For example, classic semaphores permit deadlocks, in which one process gets a semaphore, another process gets a second semaphore, and then both wait for the other semaphore to be released. Other common side-effects include starvation, in which a process never gets sufficient resources to run to completion; priority inversion, in which a higher-priority thread waits for a lower-priority thread; and high latency, in which response to interrupts is not prompt.
+- Many forms of mutual exclusion have side-effects. For example, classic semaphores permit deadlocks, in which one process gets a semaphore, another process gets a second semaphore, and then both wait for the other semaphore to be released. Other common side-effects include starvation, in which a process never gets sufficient resources to run to completion.
 
 ---
 
@@ -127,4 +129,4 @@ func main() {
 - **Semaphore**: Allows multiple threads to access a resource while limiting how many can do so simultaneously. Use it for shared access with restrictions.
 - **In Go**: Mutexes are provided by the `sync` package, and semaphores can be implemented using channels.
 
-Understanding these tools will help you write safer and more efficient concurrent programs. Now you’re ready to tackle those airline seat reservations or multi-threaded video games with confidence!
+Understanding these tools will help you write safer and more efficient concurrent programs.
