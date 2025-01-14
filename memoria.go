@@ -2,6 +2,7 @@ package memoria
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -448,6 +449,78 @@ func (m *Memoria) Close() error { // Here, the Close() method only clears the in
 		delete(m.cache, key) // To delete the key from cache map
 	}
 	m.cacheSize = 0
+
+	return nil
+}
+
+// createdump method
+func (m *Memoria) createDump() error {
+	// buffer to hold the dump data
+	var buf bytes.Buffer
+
+	// writer to serialize the key-value data into the buffer.
+	encoder := json.NewEncoder(&buf)
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for key, value := range m.cache {
+		// Write key-value pairs into the buffer
+		if err := encoder.Encode(map[string][]byte{key: value}); err != nil {
+			return fmt.Errorf("failed to encode key-value pair %s: %v", key, err)
+		}
+	}
+
+	dumpFilePath := filepath.Join(m.Basedir, "backup.dump")
+	file, err := os.Create(dumpFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create dump file: %v", err)
+	}
+	defer file.Close()
+
+	if _, err := buf.WriteTo(file); err != nil {
+		return fmt.Errorf("failed to write dump data to file: %v", err)
+	}
+
+	return nil
+}
+
+// Backup mrthod restores the store's data from a backup file located in the given directory.
+func (m *Memoria) Backup(backupDir string) error {
+	// Construct path to the dump file that needs to be restored
+	dumpFilePath := filepath.Join(backupDir, "backup.dump")
+
+	// Open the backup dump file
+	file, err := os.Open(dumpFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open backup dump file: %v", err)
+	}
+	defer file.Close()
+
+	// Read the contents of the file into a buffer
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(file); err != nil {
+		return fmt.Errorf("failed to read from backup dump file: %v", err)
+	}
+
+	// Decode the backup data into memory
+	decoder := json.NewDecoder(&buf)
+	for {
+		var data map[string][]byte
+		if err := decoder.Decode(&data); err != nil {
+			if err == io.EOF {
+				break // End of the backup file
+			}
+			return fmt.Errorf("failed to decode backup data: %v", err)
+		}
+
+		// Insert each key-value pair back into the memory store
+		for key, value := range data {
+			m.mu.Lock()
+			m.cache[key] = value
+			m.mu.Unlock()
+		}
+	}
 
 	return nil
 }
