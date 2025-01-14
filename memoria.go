@@ -19,8 +19,14 @@ const (
 )
 
 var (
-	defaultTransform = func(s string) *PathKey { return &PathKey{Path: []string{}, FileName: s} }
+	defaultTransform = func(s string) *PathKey {
+		return &PathKey{Path: []string{}, FileName: s}
+	}
 )
+var defaultInverseTransform = func(pathKey *PathKey) string {
+	// Rebuild the key by joining the path parts and appending the filename
+	return fmt.Sprintf("%s/%s", filepath.Join(pathKey.Path...), pathKey.FileName)
+}
 
 type PathKey struct {
 	Path        []string
@@ -32,15 +38,19 @@ type PathKey struct {
 // so the final  location of the data file will be <basedir>/ab/cde/f/abcdef
 type PathTransform func(key string) *PathKey
 
+// inv transform func takes file path as input and returns the original key
+type InversePathTransform func(pathKey *PathKey) string
+
 type Options struct {
 	MaxCacheSize uint64
 	Basedir      string
 	// Tempdir       string solve for issues
-	pathPerm      os.FileMode
-	filePerm      os.FileMode
-	PathTransform PathTransform
-	cachePolicy   CachePolicy
-	bufferSize    int // the reading and writing is bufferd in memria so this feild represents the size of that buffer
+	pathPerm             os.FileMode
+	filePerm             os.FileMode
+	PathTransform        PathTransform
+	InversePathTransform InversePathTransform
+	cachePolicy          CachePolicy
+	bufferSize           int // the reading and writing is bufferd in memria so this feild represents the size of that buffer
 	// compression Compression this field represents a compression mechanism for the store
 	// index Indexer this field is for the stores that have some sort of ordering
 
@@ -61,6 +71,10 @@ func New(o Options) *Memoria {
 
 	if o.PathTransform == nil {
 		o.PathTransform = defaultTransform
+	}
+
+	if o.InversePathTransform == nil {
+		o.InversePathTransform = defaultInverseTransform
 	}
 
 	if o.cachePolicy == nil {
@@ -94,6 +108,10 @@ func (m *Memoria) transform(key string) (pathkey *PathKey) {
 	pathkey = m.PathTransform(key)
 	pathkey.originalKey = key
 	return pathkey
+}
+
+func (m *Memoria) InverseTransform(pathKey *PathKey) string {
+	return m.InversePathTransform(pathKey)
 }
 
 // Write synchronously the key-value pair to the disk making it immedialtely avaialble for
