@@ -436,3 +436,18 @@ func (m *Memoria) BulkWrite(pairs map[string][]byte, numWorkers int) []WriteResu
 	return results
 
 }
+
+// Implementing the Close() method:
+
+func (m *Memoria) Close() error { // Here, the Close() method only clears the in-memory cache
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Clearing the cache within the memory:
+	for key := range m.cache {
+		delete(m.cache, key) // To delete the key from cache map
+	}
+	m.cacheSize = 0
+
+	return nil
+}
